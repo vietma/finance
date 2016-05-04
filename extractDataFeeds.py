@@ -41,17 +41,37 @@ TABLES_TO_CREATE['stockquotes'] = (
         "52_week_high FLOAT, "
         "200_day_moving_average FLOAT, "
         "company_name VARCHAR(100), "
-        "PRIMARY KEY (id)"
-    ") ENGINE=InnoDB "
+        "PRIMARY KEY (id), "
+        "KEY `symbol` (`symbol`)"
+    ") ENGINE=InnoDB"
+    )
+
+TABLES_TO_CREATE['oneyearprice'] = (
+    "CREATE TABLE IF NOT EXISTS oneyearprice ("
+        "symbol CHAR(6) NOT NULL, "
+        "52_week_low FLOAT, "
+        "52_week_high FLOAT, "
+        "PRIMARY KEY (`symbol`), "        
+        "CONSTRAINT `oneyearprice_fk` FOREIGN KEY (`symbol`) REFERENCES `stockquotes` (`symbol`) "
+        "ON DELETE CASCADE "
+        "ON UPDATE CASCADE "
+    ") ENGINE=InnoDB"
     )
 
 TABLES_TO_REMOVE = {}
+
+TABLES_TO_REMOVE['oneyearprice'] = (
+    "DROP TABLE IF EXISTS oneyearprice CASCADE"                                
+    )
 
 TABLES_TO_REMOVE['stockquotes'] = (
     "DROP TABLE IF EXISTS stockquotes CASCADE"                                
     )
 
-url = 'http://download.finance.yahoo.com/d/quotes.csv?f=sp2l1jkm4n&s=EVN.AX+PRU.AX+RRL.AX+WOR.AX+ANZ.AX+WBC.AX+CBA.AX+MQG.AX+NAB.AX'
+
+quotes = "EVN.AX+PRU.AX+RRL.AX+WOR.AX+ANZ.AX+WBC.AX+CBA.AX+MQG.AX+NAB.AX"
+
+url = 'http://download.finance.yahoo.com/d/quotes.csv?f=sp2l1jkm4n&s=' + quotes
 response = urllib2.urlopen(url)
 
 table = csv.reader(response)
@@ -91,6 +111,10 @@ try:
     
     #insert data
     cursor.execute(insertQuery)
+    
+    #insert data into oneyearprice
+    oneyearpriceData = "INSERT INTO oneyearprice (symbol, 52_week_low, 52_week_high) SELECT symbol, 52_week_low, 52_week_high FROM stockquotes;"
+    cursor.execute(oneyearpriceData)
     
     # Make sure data is committed to the database
     cnx.commit()
