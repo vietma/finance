@@ -15,10 +15,23 @@ def formatColumn(col):
         return col
     else:
         return "'" + col + "'"
+    
+def ddlTables(tables):
+    for name, ddl in tables.iteritems():
+        try:
+            print("Creating/Deleting table {}: ".format(name))
+            cursor.execute(ddl)
+        except mysql.connector.Error as err:
+            if err.errno == errorcode.ER_TABLE_EXISTS_ERROR:
+                print("table already exists.")
+            else:
+                print(err.msg)
+        else:
+            print("OK")
+    
+TABLES_TO_CREATE = {}
 
-TABLES = {}
-
-TABLES['stockquotes'] = (
+TABLES_TO_CREATE['stockquotes'] = (
     "CREATE TABLE IF NOT EXISTS stockquotes ("
         "id MEDIUMINT NOT NULL AUTO_INCREMENT, "
         "symbol CHAR(6) NOT NULL, "
@@ -29,7 +42,14 @@ TABLES['stockquotes'] = (
         "200_day_moving_average FLOAT, "
         "company_name VARCHAR(100), "
         "PRIMARY KEY (id)"
-    ") ENGINE=InnoDB ")
+    ") ENGINE=InnoDB "
+    )
+
+TABLES_TO_REMOVE = {}
+
+TABLES_TO_REMOVE['stockquotes'] = (
+    "DROP TABLE IF EXISTS stockquotes CASCADE"                                
+    )
 
 url = 'http://download.finance.yahoo.com/d/quotes.csv?f=sp2l1jkm4n&s=EVN.AX+PRU.AX+RRL.AX+WOR.AX+ANZ.AX+WBC.AX+CBA.AX+MQG.AX+NAB.AX'
 response = urllib2.urlopen(url)
@@ -57,24 +77,15 @@ try:
     cnx = mysql.connector.connect(user='financeAdmin', password='passW0rd1',
                               host='localhost',
                               database='finance')
-    #create tables
+    
     cursor = cnx.cursor()
     
-    for name, ddl in TABLES.iteritems():
-        try:
-            print("Creating table {}: ".format(name))
-            cursor.execute(ddl)
-        except mysql.connector.Error as err:
-            if err.errno == errorcode.ER_TABLE_EXISTS_ERROR:
-                print("table already exists.")
-            else:
-                print(err.msg)
-        else:
-            print("OK")
+    #delete tables before creating tables
+    ddlTables(TABLES_TO_REMOVE)
     
+    #create tables
+    ddlTables(TABLES_TO_CREATE)
 
- #   cursor.execute(createQuery) 
- #   cnx.commit()
     
 #    query = "SELECT ID, SYMBOL FROM STOCKQUOTES"
     
