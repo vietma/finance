@@ -128,8 +128,7 @@ try:
     #insert data into history prices
     checkDate = "SELECT last_trade_date FROM stockquotes LIMIT 1;"
     cursor.execute(checkDate)
-    for (last_trade_date) in cursor:
-        print last_trade_date
+    print cursor.fetchone()
     
     # Make sure data is committed to the database
     cnx.commit()
