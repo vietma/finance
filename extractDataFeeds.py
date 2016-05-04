@@ -125,6 +125,12 @@ try:
     oneyearpriceData = "INSERT INTO oneyearprice (symbol, 52_week_low, 52_week_high) SELECT symbol, 52_week_low, 52_week_high FROM stockquotes;"
     cursor.execute(oneyearpriceData)
     
+    #insert data into history prices
+    checkDate = "SELECT last_trade_date FROM stockquotes LIMIT 1;"
+    cursor.execute(checkDate)
+    for (last_trade_date) in cursor:
+        print last_trade_date
+    
     # Make sure data is committed to the database
     cnx.commit()
     
