@@ -15,11 +15,23 @@ def is_date(s):
         return True
     return False
 
+def is_percent(s):
+    if s.find("%") != -1: #Found percent
+        return True
+    return False
+
+def formatPercentColumn(s):
+    if is_percent(s): 
+        s = s.replace("%", "")        
+    return s  
+
 def formatColumn(col):
     if is_float(col) or col.isdigit():
         return col
     elif is_date(col):
         return "STR_TO_DATE('" + col + "', '%m/%d/%Y')"        
+    elif is_percent(col):        
+        return formatPercentColumn(col)
     else:
         return "'" + col + "'"
     
@@ -42,11 +54,14 @@ TABLES_TO_CREATE['stockquotes'] = (
     "CREATE TABLE IF NOT EXISTS stockquotes ("
         "id MEDIUMINT NOT NULL AUTO_INCREMENT, "
         "symbol CHAR(6) NOT NULL, "
-        "change_in_percent VARCHAR(30), "
+        "change_in_percent FLOAT, "
         "last_trade FLOAT, "
         "52_week_low FLOAT, "
         "52_week_high FLOAT, "
+        "50_day_moving_average FLOAT, "
+        "percent_change_from_50_day_moving_average FLOAT, "
         "200_day_moving_average FLOAT, "
+        "percent_change_from_200_day_moving_average FLOAT, "
         "company_name VARCHAR(100), "
         "last_trade_date DATE, "
         "last_trade_time VARCHAR(20), "        
@@ -78,9 +93,9 @@ TABLES_TO_REMOVE['stockquotes'] = (
     )
 
 
-quotes = "EVN.AX+PRU.AX+RRL.AX+WOR.AX+ANZ.AX+WBC.AX+CBA.AX+MQG.AX+NAB.AX"
+quotes = "EVN.AX+PRU.AX+RRL.AX+WOR.AX+ANZ.AX+WBC.AX+CBA.AX+MQG.AX+NAB.AX+BHP.AX+RIO.AX+NCM.AX+BAL.AX+SLR.AX+MPL.AX"
 
-url = 'http://download.finance.yahoo.com/d/quotes.csv?f=sp2l1jkm4nd1t1&s=' + quotes
+url = 'http://download.finance.yahoo.com/d/quotes.csv?f=sp2l1jkm3m8m4m6nd1t1&s=' + quotes
 response = urllib2.urlopen(url)
 
 table = csv.reader(response)
@@ -97,7 +112,7 @@ for row in table:
 
 insertValues = insertValues[:-2]
 
-insertQuery = "INSERT INTO stockquotes (symbol, change_in_percent, last_trade, 52_week_low, 52_week_high, 200_day_moving_average, company_name, last_trade_date, last_trade_time) VALUES " + insertValues + ";"
+insertQuery = "INSERT INTO stockquotes (symbol, change_in_percent, last_trade, 52_week_low, 52_week_high, 50_day_moving_average, percent_change_from_50_day_moving_average, 200_day_moving_average, percent_change_from_200_day_moving_average, company_name, last_trade_date, last_trade_time) VALUES " + insertValues + ";"
 print insertQuery
 
 #createQuery = "CREATE TABLE IF NOT EXISTS stockquotes (" + "id MEDIUMINT NOT NULL AUTO_INCREMENT, " + "symbol CHAR(6) NOT NULL, " + "change_in_percent VARCHAR(30), " + "last_trade  FLOAT, " + "52_week_low  FLOAT, " + "52_week_high  FLOAT, " + "200_day_moving_average  FLOAT, " + "company_name VARCHAR(100), " + "PRIMARY KEY (id)" + ");"
