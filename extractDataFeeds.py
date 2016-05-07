@@ -82,7 +82,24 @@ TABLES_TO_CREATE['oneyearprice'] = (
     ") ENGINE=InnoDB"
     )
 
+TABLES_TO_CREATE['crossover'] = (
+    "CREATE TABLE IF NOT EXISTS crossover ("
+        "symbol CHAR(6) NOT NULL, "
+        "crossover_status VARCHAR(6), "
+        "50_day_moving_average FLOAT, "
+        "200_day_moving_average FLOAT, "
+        "PRIMARY KEY (`symbol`), "        
+        "CONSTRAINT `crossover_fk` FOREIGN KEY (`symbol`) REFERENCES `stockquotes` (`symbol`) "
+        "ON DELETE CASCADE "
+        "ON UPDATE CASCADE "
+    ") ENGINE=InnoDB"
+    )
+
 TABLES_TO_REMOVE = {}
+
+TABLES_TO_REMOVE['crossover'] = (
+    "DROP TABLE IF EXISTS crossover CASCADE"                                
+    )
 
 TABLES_TO_REMOVE['oneyearprice'] = (
     "DROP TABLE IF EXISTS oneyearprice CASCADE"                                
@@ -139,6 +156,10 @@ try:
     #insert data into oneyearprice
     oneyearpriceData = "INSERT INTO oneyearprice (symbol, 52_week_low, 52_week_high) SELECT symbol, 52_week_low, 52_week_high FROM stockquotes;"
     cursor.execute(oneyearpriceData)
+    
+    #insert data into crossover
+    crossoverData = "INSERT INTO crossover (symbol, crossover_status, 50_day_moving_average, 200_day_moving_average) SELECT symbol, IF(50_day_moving_average - 200_day_moving_average > 0, 'True', 'False') as crossover_status, 50_day_moving_average, 200_day_moving_average FROM stockquotes;"
+    cursor.execute(crossoverData)
     
     #insert data into history prices
     checkDate = "SELECT last_trade_date FROM stockquotes LIMIT 1;"
