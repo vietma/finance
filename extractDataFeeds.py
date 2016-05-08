@@ -2,51 +2,53 @@ import urllib2
 import csv
 import mysql.connector
 from mysql.connector import errorcode
+from helper import ddlTables
+from helper import formatColumn
 
-def is_float(s):
-    result = False
-    if s.count(".") == 1:
-        if s.replace(".", "").isdigit():
-            result = True
-    return result
+# def is_float(s):
+#     result = False
+#     if s.count(".") == 1:
+#         if s.replace(".", "").isdigit():
+#             result = True
+#     return result
+# 
+# def is_date(s):
+#     if s.find("/") != -1: #Found Date
+#         return True
+#     return False
+# 
+# def is_percent(s):
+#     if s.find("%") != -1: #Found percent
+#         return True
+#     return False
 
-def is_date(s):
-    if s.find("/") != -1: #Found Date
-        return True
-    return False
+# def formatPercentColumn(s):
+#     if is_percent(s): 
+#         s = s.replace("%", "")        
+#     return s  
 
-def is_percent(s):
-    if s.find("%") != -1: #Found percent
-        return True
-    return False
-
-def formatPercentColumn(s):
-    if is_percent(s): 
-        s = s.replace("%", "")        
-    return s  
-
-def formatColumn(col):
-    if is_float(col) or col.isdigit():
-        return col
-    elif is_date(col):
-        return "STR_TO_DATE('" + col + "', '%m/%d/%Y')"        
-    elif is_percent(col):        
-        return formatPercentColumn(col)
-    else:
-        return "'" + col + "'"
+# def formatColumn(col):
+#     if is_float(col) or col.isdigit():
+#         return col
+#     elif is_date(col):
+#         return "STR_TO_DATE('" + col + "', '%m/%d/%Y')"        
+#     elif is_percent(col):        
+#         return formatPercentColumn(col)
+#     else:
+#         return "'" + col + "'"
     
-def ddlTables(tables):
-    for name, ddl in tables.iteritems():
-        try:
-            print("Creating/Deleting table {}: ".format(name))
-            cursor.execute(ddl)
-        except mysql.connector.Error as err:
-            if err.errno == errorcode.ER_TABLE_EXISTS_ERROR:
-                print("table already exists.")
-            else:
-                print(err.msg)
-        else:
-            print("OK")
+# def ddlTables(tables):
+#     for name, ddl in tables.iteritems():
+#         try:
+#             print("Creating/Deleting table {}: ".format(name))
+#             cursor.execute(ddl)
+#         except mysql.connector.Error as err:
+#             if err.errno == errorcode.ER_TABLE_EXISTS_ERROR:
+#                 print("table already exists.")
+#             else:
+#                 print(err.msg)
+#         else:
+#             print("OK")
     
 TABLES_TO_CREATE = {}
 
@@ -142,10 +144,10 @@ try:
     cursor = cnx.cursor()
     
     #delete tables before creating tables
-    ddlTables(TABLES_TO_REMOVE)
+    ddlTables(cursor, TABLES_TO_REMOVE)
     
     #create tables
-    ddlTables(TABLES_TO_CREATE)
+    ddlTables(cursor, TABLES_TO_CREATE)
 
     
 #    query = "SELECT ID, SYMBOL FROM STOCKQUOTES"
