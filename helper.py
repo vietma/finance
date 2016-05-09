@@ -16,6 +16,16 @@ def ddlTables(cursor, tables):
                 print(err.msg)
         else:
             print("Successfully create/delete table {}".format(name))
+
+def getSymbols(cursor):
+    query = ("SELECT symbol FROM asxlistedcompanies "
+             "LIMIT 0, 10")
+    cursor.execute(query)
+    allSymbols = ""
+    for row in cursor:
+        symbol = row[0]        
+        allSymbols += "{}".format(symbol) + ".AX" + "+"
+    return allSymbols[:-1]    
             
             
 def is_float(s):
@@ -29,8 +39,11 @@ def is_date(s):
     try:
         if len(s) == 3:
             return False
-        parse(s)
-        return True
+        elif (s.lower().find("pm") != -1) or (s.lower().find("am") != -1):
+            return False
+        else:
+            parse(s)
+            return True
     except ValueError:
         return False
 #     if s.find("/") != -1: #Found Date

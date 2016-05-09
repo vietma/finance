@@ -4,51 +4,36 @@ import mysql.connector
 from mysql.connector import errorcode
 from helper import ddlTables
 from helper import formatColumn
+from helper import getSymbols
+import math
 
-# def is_float(s):
-#     result = False
-#     if s.count(".") == 1:
-#         if s.replace(".", "").isdigit():
-#             result = True
-#     return result
-# 
-# def is_date(s):
-#     if s.find("/") != -1: #Found Date
-#         return True
-#     return False
-# 
-# def is_percent(s):
-#     if s.find("%") != -1: #Found percent
-#         return True
-#     return False
 
-# def formatPercentColumn(s):
-#     if is_percent(s): 
-#         s = s.replace("%", "")        
-#     return s  
-
-# def formatColumn(col):
-#     if is_float(col) or col.isdigit():
-#         return col
-#     elif is_date(col):
-#         return "STR_TO_DATE('" + col + "', '%m/%d/%Y')"        
-#     elif is_percent(col):        
-#         return formatPercentColumn(col)
-#     else:
-#         return "'" + col + "'"
+def getStockData(symbols, criteria):
+    #sp2l1jkm3m8m4m6nd1t1
+    url = 'http://download.finance.yahoo.com/d/quotes.csv?f=' + criteria +'&s=' + symbols
+    response = urllib2.urlopen(url)
     
-# def ddlTables(tables):
-#     for name, ddl in tables.iteritems():
-#         try:
-#             print("Creating/Deleting table {}: ".format(name))
-#             cursor.execute(ddl)
-#         except mysql.connector.Error as err:
-#             if err.errno == errorcode.ER_TABLE_EXISTS_ERROR:
-#                 print("table already exists.")
-#             else:
-#                 print(err.msg)
-#         else:
-#             print("OK")
+    table = csv.reader(response)
+    
+    insertValues = ""
+    for row in table:
+        values = "("
+        for column in row:
+            print 'column = ' + column
+#             if (column.strip() == 'N/A') or (column.strip() == '#NAME?') or (column.strip() == "+inf%"):
+            if column.strip() == "+inf%":
+                print '+inf% column found = ' + column
+                break
+            else:
+                values = values + formatColumn(column) + ","
+        values = values[:-1]
+        values += "),"    
+        values += "\n"    
+        insertValues = insertValues + values
+    
+    return insertValues[:-2]
+    
+    
     
 TABLES_TO_CREATE = {}
 
@@ -112,27 +97,27 @@ TABLES_TO_REMOVE['stockquotes'] = (
     )
 
 
-quotes = "EVN.AX+PRU.AX+RRL.AX+WOR.AX+ANZ.AX+WBC.AX+CBA.AX+MQG.AX+NAB.AX+BHP.AX+RIO.AX+NCM.AX+BAL.AX+SLR.AX+MPL.AX"
-
-url = 'http://download.finance.yahoo.com/d/quotes.csv?f=sp2l1jkm3m8m4m6nd1t1&s=' + quotes
-response = urllib2.urlopen(url)
-
-table = csv.reader(response)
-
-insertValues = ""
-for row in table:
-    values = "("
-    for column in row:
-        values = values + formatColumn(column) + ","
-    values = values[:-1]
-    values += "),"    
-    values += "\n"    
-    insertValues = insertValues + values
-
-insertValues = insertValues[:-2]
-
-insertQuery = "INSERT INTO stockquotes (symbol, change_in_percent, last_trade, 52_week_low, 52_week_high, 50_day_moving_average, percent_change_from_50_day_moving_average, 200_day_moving_average, percent_change_from_200_day_moving_average, company_name, last_trade_date, last_trade_time) VALUES " + insertValues + ";"
-print insertQuery
+# quotes = "EVN.AX+PRU.AX+RRL.AX+WOR.AX+ANZ.AX+WBC.AX+CBA.AX+MQG.AX+NAB.AX+BHP.AX+RIO.AX+NCM.AX+BAL.AX+SLR.AX+MPL.AX"
+# 
+# url = 'http://download.finance.yahoo.com/d/quotes.csv?f=sp2l1jkm3m8m4m6nd1t1&s=' + quotes
+# response = urllib2.urlopen(url)
+# 
+# table = csv.reader(response)
+# 
+# insertValues = ""
+# for row in table:
+#     values = "("
+#     for column in row:
+#         values = values + formatColumn(column) + ","
+#     values = values[:-1]
+#     values += "),"    
+#     values += "\n"    
+#     insertValues = insertValues + values
+# 
+# insertValues = insertValues[:-2]
+# 
+# insertQuery = "INSERT INTO stockquotes (symbol, change_in_percent, last_trade, 52_week_low, 52_week_high, 50_day_moving_average, percent_change_from_50_day_moving_average, 200_day_moving_average, percent_change_from_200_day_moving_average, company_name, last_trade_date, last_trade_time) VALUES " + insertValues + ";"
+# print insertQuery
 
 #createQuery = "CREATE TABLE IF NOT EXISTS stockquotes (" + "id MEDIUMINT NOT NULL AUTO_INCREMENT, " + "symbol CHAR(6) NOT NULL, " + "change_in_percent VARCHAR(30), " + "last_trade  FLOAT, " + "52_week_low  FLOAT, " + "52_week_high  FLOAT, " + "200_day_moving_average  FLOAT, " + "company_name VARCHAR(100), " + "PRIMARY KEY (id)" + ");"
 
@@ -149,24 +134,32 @@ try:
     #create tables
     ddlTables(cursor, TABLES_TO_CREATE)
 
+    #get list of symbols
+    #print getSymbols(cursor)
     
-#    query = "SELECT ID, SYMBOL FROM STOCKQUOTES"
+    criteria = "sp2l1jkm3m8m4m6nd1t1"
+    insertValues = getStockData(getSymbols(cursor), criteria)
     
+    insertQuery = ("INSERT INTO stockquotes "
+                   "(symbol, change_in_percent, last_trade, 52_week_low, 52_week_high, 50_day_moving_average, percent_change_from_50_day_moving_average, 200_day_moving_average, percent_change_from_200_day_moving_average, company_name, last_trade_date, last_trade_time) "
+                   "VALUES " + insertValues)
+    
+    print insertQuery
     #insert data
     cursor.execute(insertQuery)
     
-    #insert data into oneyearprice
-    oneyearpriceData = "INSERT INTO oneyearprice (symbol, 52_week_low, 52_week_high) SELECT symbol, 52_week_low, 52_week_high FROM stockquotes;"
-    cursor.execute(oneyearpriceData)
-    
-    #insert data into crossover
-    crossoverData = "INSERT INTO crossover (symbol, crossover_status, 50_day_moving_average, 200_day_moving_average) SELECT symbol, IF(50_day_moving_average - 200_day_moving_average > 0, 'True', 'False') as crossover_status, 50_day_moving_average, 200_day_moving_average FROM stockquotes;"
-    cursor.execute(crossoverData)
-    
-    #insert data into history prices
-    checkDate = "SELECT last_trade_date FROM stockquotes LIMIT 1;"
-    cursor.execute(checkDate)
-    print cursor.fetchone()
+#     #insert data into oneyearprice
+#     oneyearpriceData = "INSERT INTO oneyearprice (symbol, 52_week_low, 52_week_high) SELECT symbol, 52_week_low, 52_week_high FROM stockquotes;"
+#     cursor.execute(oneyearpriceData)
+#     
+#     #insert data into crossover
+#     crossoverData = "INSERT INTO crossover (symbol, crossover_status, 50_day_moving_average, 200_day_moving_average) SELECT symbol, IF(50_day_moving_average - 200_day_moving_average > 0, 'True', 'False') as crossover_status, 50_day_moving_average, 200_day_moving_average FROM stockquotes;"
+#     cursor.execute(crossoverData)
+#     
+#     #insert data into history prices
+#     checkDate = "SELECT last_trade_date FROM stockquotes LIMIT 1;"
+#     cursor.execute(checkDate)
+#     print cursor.fetchone()
     
     # Make sure data is committed to the database
     cnx.commit()
