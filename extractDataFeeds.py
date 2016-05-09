@@ -5,7 +5,8 @@ from mysql.connector import errorcode
 from helper import ddlTables
 from helper import formatColumn
 from helper import getSymbols
-import math
+from helper import totalNumberOfSymbols
+
 
 
 def getStockData(symbols, criteria):
@@ -16,20 +17,22 @@ def getStockData(symbols, criteria):
     table = csv.reader(response)
     
     insertValues = ""
-    for row in table:
+    for row in table:        
         values = "("
-        for column in row:
-            print 'column = ' + column
-#             if (column.strip() == 'N/A') or (column.strip() == '#NAME?') or (column.strip() == "+inf%"):
-            if column.strip() == "+inf%":
-                print '+inf% column found = ' + column
+        col_idx = 0
+        for column in row:            
+            col_idx += 1
+            if (column.strip() == "+inf%") or (column.strip() == 'N/A'):                
+                values = ""
                 break
             else:
-                values = values + formatColumn(column) + ","
-        values = values[:-1]
-        values += "),"    
-        values += "\n"    
-        insertValues = insertValues + values
+                if col_idx < len(row):
+                    lineending = ","
+                else:
+                    lineending = "),\n"
+                values = values + formatColumn(column) + lineending
+        if col_idx == len(row):
+            insertValues += values        
     
     return insertValues[:-2]
     
@@ -82,44 +85,22 @@ TABLES_TO_CREATE['crossover'] = (
     ") ENGINE=InnoDB"
     )
 
-TABLES_TO_REMOVE = {}
-
-TABLES_TO_REMOVE['crossover'] = (
-    "DROP TABLE IF EXISTS crossover CASCADE"                                
-    )
-
-TABLES_TO_REMOVE['oneyearprice'] = (
-    "DROP TABLE IF EXISTS oneyearprice CASCADE"                                
-    )
-
-TABLES_TO_REMOVE['stockquotes'] = (
-    "DROP TABLE IF EXISTS stockquotes CASCADE"                                
-    )
-
-
-# quotes = "EVN.AX+PRU.AX+RRL.AX+WOR.AX+ANZ.AX+WBC.AX+CBA.AX+MQG.AX+NAB.AX+BHP.AX+RIO.AX+NCM.AX+BAL.AX+SLR.AX+MPL.AX"
+# TABLES_TO_REMOVE = {}
 # 
-# url = 'http://download.finance.yahoo.com/d/quotes.csv?f=sp2l1jkm3m8m4m6nd1t1&s=' + quotes
-# response = urllib2.urlopen(url)
+# TABLES_TO_REMOVE['crossover'] = (
+#     "DROP TABLE IF EXISTS crossover CASCADE"                                
+#     )
 # 
-# table = csv.reader(response)
+# TABLES_TO_REMOVE['oneyearprice'] = (
+#     "DROP TABLE IF EXISTS oneyearprice CASCADE"                                
+#     )
 # 
-# insertValues = ""
-# for row in table:
-#     values = "("
-#     for column in row:
-#         values = values + formatColumn(column) + ","
-#     values = values[:-1]
-#     values += "),"    
-#     values += "\n"    
-#     insertValues = insertValues + values
-# 
-# insertValues = insertValues[:-2]
-# 
-# insertQuery = "INSERT INTO stockquotes (symbol, change_in_percent, last_trade, 52_week_low, 52_week_high, 50_day_moving_average, percent_change_from_50_day_moving_average, 200_day_moving_average, percent_change_from_200_day_moving_average, company_name, last_trade_date, last_trade_time) VALUES " + insertValues + ";"
-# print insertQuery
+# TABLES_TO_REMOVE['stockquotes'] = (
+#     "DROP TABLE IF EXISTS stockquotes CASCADE"                                
+#     )
 
-#createQuery = "CREATE TABLE IF NOT EXISTS stockquotes (" + "id MEDIUMINT NOT NULL AUTO_INCREMENT, " + "symbol CHAR(6) NOT NULL, " + "change_in_percent VARCHAR(30), " + "last_trade  FLOAT, " + "52_week_low  FLOAT, " + "52_week_high  FLOAT, " + "200_day_moving_average  FLOAT, " + "company_name VARCHAR(100), " + "PRIMARY KEY (id)" + ");"
+TABLES_TO_REMOVE = ["DROP TABLE IF EXISTS crossover CASCADE", "DROP TABLE IF EXISTS oneyearprice CASCADE", "DROP TABLE IF EXISTS stockquotes CASCADE"]
+
 
 try:    
     cnx = mysql.connector.connect(user='financeAdmin', password='passW0rd1',
@@ -129,32 +110,40 @@ try:
     cursor = cnx.cursor()
     
     #delete tables before creating tables
-    ddlTables(cursor, TABLES_TO_REMOVE)
+#     ddlTables(cursor, TABLES_TO_REMOVE)
+    for i in TABLES_TO_REMOVE:
+        cursor.execute(i)
+    
     
     #create tables
     ddlTables(cursor, TABLES_TO_CREATE)
 
-    #get list of symbols
-    #print getSymbols(cursor)
-    
+        
     criteria = "sp2l1jkm3m8m4m6nd1t1"
-    insertValues = getStockData(getSymbols(cursor), criteria)
     
-    insertQuery = ("INSERT INTO stockquotes "
-                   "(symbol, change_in_percent, last_trade, 52_week_low, 52_week_high, 50_day_moving_average, percent_change_from_50_day_moving_average, 200_day_moving_average, percent_change_from_200_day_moving_average, company_name, last_trade_date, last_trade_time) "
-                   "VALUES " + insertValues)
+    startPos = 0
+    offset = 40
+    symbolNumber = totalNumberOfSymbols(cursor)
     
-    print insertQuery
-    #insert data
-    cursor.execute(insertQuery)
+    while startPos < symbolNumber:           
+        insertValues = getStockData(getSymbols(cursor, startPos, offset), criteria)
+        startPos += offset
+        
+        insertQuery = ("INSERT INTO stockquotes "
+                       "(symbol, change_in_percent, last_trade, 52_week_low, 52_week_high, 50_day_moving_average, percent_change_from_50_day_moving_average, 200_day_moving_average, percent_change_from_200_day_moving_average, company_name, last_trade_date, last_trade_time) "
+                       "VALUES " + insertValues)
     
-#     #insert data into oneyearprice
-#     oneyearpriceData = "INSERT INTO oneyearprice (symbol, 52_week_low, 52_week_high) SELECT symbol, 52_week_low, 52_week_high FROM stockquotes;"
-#     cursor.execute(oneyearpriceData)
-#     
-#     #insert data into crossover
-#     crossoverData = "INSERT INTO crossover (symbol, crossover_status, 50_day_moving_average, 200_day_moving_average) SELECT symbol, IF(50_day_moving_average - 200_day_moving_average > 0, 'True', 'False') as crossover_status, 50_day_moving_average, 200_day_moving_average FROM stockquotes;"
-#     cursor.execute(crossoverData)
+        print insertQuery
+        #insert data
+        cursor.execute(insertQuery)
+    
+    #insert data into oneyearprice
+    oneyearpriceData = "INSERT INTO oneyearprice (symbol, 52_week_low, 52_week_high) SELECT symbol, 52_week_low, 52_week_high FROM stockquotes;"
+    cursor.execute(oneyearpriceData)
+     
+    #insert data into crossover
+    crossoverData = "INSERT INTO crossover (symbol, crossover_status, 50_day_moving_average, 200_day_moving_average) SELECT symbol, IF(50_day_moving_average - 200_day_moving_average > 0, 'True', 'False') as crossover_status, 50_day_moving_average, 200_day_moving_average FROM stockquotes;"
+    cursor.execute(crossoverData)
 #     
 #     #insert data into history prices
 #     checkDate = "SELECT last_trade_date FROM stockquotes LIMIT 1;"

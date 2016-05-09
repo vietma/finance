@@ -17,16 +17,21 @@ def ddlTables(cursor, tables):
         else:
             print("Successfully create/delete table {}".format(name))
 
-def getSymbols(cursor):
+def getSymbols(cursor, startPos, offset):
     query = ("SELECT symbol FROM asxlistedcompanies "
-             "LIMIT 0, 10")
-    cursor.execute(query)
+             "LIMIT %s, %s")
+    cursor.execute(query, (startPos, offset))
     allSymbols = ""
     for row in cursor:
         symbol = row[0]        
         allSymbols += "{}".format(symbol) + ".AX" + "+"
     return allSymbols[:-1]    
-            
+
+def totalNumberOfSymbols(cursor):
+    query = ("SELECT count(symbol) FROM asxlistedcompanies")
+    cursor.execute(query)
+    result = cursor.fetchone()
+    return result[0]
             
 def is_float(s):
     result = False
