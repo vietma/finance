@@ -18,7 +18,7 @@ def ddlTables(cursor, tables):
             print("Successfully create/delete table {}".format(name))
 
 def getSymbols(cursor, startPos, offset):
-    query = ("SELECT symbol FROM asxlistedcompanies "
+    query = ("SELECT symbol FROM ASXListedCompanies "
              "LIMIT %s, %s")
     cursor.execute(query, (startPos, offset))
     allSymbols = ""
@@ -28,7 +28,7 @@ def getSymbols(cursor, startPos, offset):
     return allSymbols[:-1]    
 
 def totalNumberOfSymbols(cursor):
-    query = ("SELECT count(symbol) FROM asxlistedcompanies")
+    query = ("SELECT count(symbol) FROM ASXListedCompanies")
     cursor.execute(query)
     result = cursor.fetchone()
     return result[0]
