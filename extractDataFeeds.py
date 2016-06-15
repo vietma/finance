@@ -76,6 +76,8 @@ TABLES_TO_CREATE['crossover'] = (
     "CREATE TABLE IF NOT EXISTS crossover ("
         "symbol CHAR(6) NOT NULL, "
         "crossover_status VARCHAR(6), "
+        "change_in_percent FLOAT, "
+        "last_trade FLOAT, "
         "50_day_moving_average FLOAT, "
         "200_day_moving_average FLOAT, "
         "PRIMARY KEY (`symbol`), "        
@@ -142,7 +144,7 @@ try:
     cursor.execute(oneyearpriceData)
      
     #insert data into crossover
-    crossoverData = "INSERT INTO crossover (symbol, crossover_status, 50_day_moving_average, 200_day_moving_average) SELECT symbol, IF(50_day_moving_average - 200_day_moving_average > 0, 'True', 'False') as crossover_status, 50_day_moving_average, 200_day_moving_average FROM stockquotes;"
+    crossoverData = "INSERT INTO crossover (symbol, crossover_status, change_in_percent, last_trade, 50_day_moving_average, 200_day_moving_average) SELECT symbol, IF(50_day_moving_average - 200_day_moving_average > 0, IF(last_trade - 50_day_moving_average > 0, IF(change_in_percent > 0, 'True', 'False' ), 'False'), 'False') as crossover_status, change_in_percent, last_trade, 50_day_moving_average, 200_day_moving_average FROM stockquotes;"
     cursor.execute(crossoverData)
 #     
 #     #insert data into history prices
