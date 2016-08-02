@@ -52,6 +52,8 @@ TABLES_TO_CREATE['stockquotes'] = (
         "percent_change_from_50_day_moving_average FLOAT, "
         "200_day_moving_average FLOAT, "
         "percent_change_from_200_day_moving_average FLOAT, "
+        "volume BIGINT, "
+        "average_daily_volume BIGINT, "
         "company_name VARCHAR(100), "
         "last_trade_date DATE, "
         "last_trade_time VARCHAR(20), "        
@@ -121,7 +123,7 @@ try:
     ddlTables(cursor, TABLES_TO_CREATE)
 
         
-    criteria = "sp2l1jkm3m8m4m6nd1t1"
+    criteria = "sp2l1jkm3m8m4m6va2nd1t1"
     
     startPos = 0
     offset = 40
@@ -132,7 +134,7 @@ try:
         startPos += offset
         
         insertQuery = ("INSERT INTO stockquotes "
-                       "(symbol, change_in_percent, last_trade, 52_week_low, 52_week_high, 50_day_moving_average, percent_change_from_50_day_moving_average, 200_day_moving_average, percent_change_from_200_day_moving_average, company_name, last_trade_date, last_trade_time) "
+                       "(symbol, change_in_percent, last_trade, 52_week_low, 52_week_high, 50_day_moving_average, percent_change_from_50_day_moving_average, 200_day_moving_average, percent_change_from_200_day_moving_average, volume, average_daily_volume, company_name, last_trade_date, last_trade_time) "
                        "VALUES " + insertValues)
     
         print insertQuery
