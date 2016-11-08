@@ -107,7 +107,8 @@ def get_historical_prices(symbol, start_date, end_date):
     params = urlencode({
         's': symbol,
         'a': int(start_date[5:7]) - 1, # MM
-        'b': int(start_date[8:10]) - 1,    # DD - Get one extra previous day to calculate percent change
+        #'b': int(start_date[8:10]) - 1,    # DD - Get one extra previous day to calculate percent change - defect when from date is the 1st
+        'b': int(start_date[8:10]), # DD
         'c': int(start_date[0:4]),     # YYYY 
         'd': int(end_date[5:7]) - 1,
         'e': int(end_date[8:10]),
@@ -204,11 +205,13 @@ def execute():
         cursor = cnx.cursor()
     
         today = datetime.date.today() # YYYY-MM-DD        
-        week_ago = today - datetime.timedelta(days=7) # YYYY-MM-DD
+        week_ago = today - datetime.timedelta(days=8) # YYYY-MM-DD
         
         start_date = week_ago.strftime('%Y-%m-%d')
+        print "start_date: " + start_date
         end_date = today.strftime('%Y-%m-%d')
-        
+        print "end_date: " + end_date
+
         # Drop table historicalprices
         print "DROP TABLE IF EXISTS historicalprices CASCADE"
         cursor.execute("DROP TABLE IF EXISTS historicalprices CASCADE")
