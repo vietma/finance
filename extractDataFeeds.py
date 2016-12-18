@@ -1,4 +1,6 @@
 import urllib2
+from urllib2 import Request, urlopen
+from urllib import urlencode
 import csv
 import mysql.connector
 from mysql.connector import errorcode
@@ -36,6 +38,53 @@ def getStockData(symbols, criteria):
     
     return insertValues[:-2]
     
+
+# Get Historical Prices
+def get_query_with_historical_prices(self, symbol, start_date, end_date):
+        # start_date and end_date are in format 'YYYY-MM-DD'
+        params = urlencode({
+            's': symbol,
+            'a': int(start_date[5:7]) - 1, # MM
+            'b': int(start_date[8:10]),    # DD
+            'c': int(start_date[0:4]),     # YYYY 
+            'd': int(end_date[5:7]) - 1,
+            'e': int(end_date[8:10]),
+            'f': int(end_date[0:4]),
+            'g': 'd',
+            'ignore': '.csv'
+        })
+        endpoint = 'http://real-chart.finance.yahoo.com/table.csv?%s' % params
+        print 'historical prices endpoint = %s' % endpoint
+        
+        request = Request(endpoint)
+        response = urlopen(request)
+        content = str(response.read().decode('utf-8').strip())
+        
+        daily_data = content.splitlines()
+        
+#         keys = daily_data[0].split(',')        
+        
+        date_column_names = ""
+        last_trade_prices = ""
+        
+        for day in daily_data[1:]:
+            day_data = day.split(',')
+            date = day_data[0]
+            last_trade = day_data[2]
+            
+            date_column_names += date + ","
+            last_trade_prices += last_trade + ","
+            
+#             keys[1]: day_data[1] # Adj Close
+#             keys[2]: day_data[2] # Close
+#             keys[3]: day_data[3] # High
+#             keys[4]: day_data[4] # Low
+#             keys[5]: day_data[5] # Open
+#             keys[6]: day_data[6]  # Volume
+        
+        insertQuery = "INSERT INTO historicalprices (symbol," + date_column_names[:-1] + ") VALUES (" + symbol + "," + last_trade_prices[:-1] + ");\n"        
+
+        return insertQuery
     
     
 TABLES_TO_CREATE = {}
@@ -52,6 +101,8 @@ TABLES_TO_CREATE['stockquotes'] = (
         "percent_change_from_50_day_moving_average FLOAT, "
         "200_day_moving_average FLOAT, "
         "percent_change_from_200_day_moving_average FLOAT, "
+        "volume BIGINT, "
+        "average_daily_volume BIGINT, "
         "company_name VARCHAR(100), "
         "last_trade_date DATE, "
         "last_trade_time VARCHAR(20), "        
@@ -76,6 +127,8 @@ TABLES_TO_CREATE['crossover'] = (
     "CREATE TABLE IF NOT EXISTS crossover ("
         "symbol CHAR(6) NOT NULL, "
         "crossover_status VARCHAR(6), "
+        "change_in_percent FLOAT, "
+        "last_trade FLOAT, "
         "50_day_moving_average FLOAT, "
         "200_day_moving_average FLOAT, "
         "PRIMARY KEY (`symbol`), "        
@@ -119,7 +172,7 @@ try:
     ddlTables(cursor, TABLES_TO_CREATE)
 
         
-    criteria = "sp2l1jkm3m8m4m6nd1t1"
+    criteria = "sp2l1jkm3m8m4m6va2nd1t1"
     
     startPos = 0
     offset = 40
@@ -130,7 +183,7 @@ try:
         startPos += offset
         
         insertQuery = ("INSERT INTO stockquotes "
-                       "(symbol, change_in_percent, last_trade, 52_week_low, 52_week_high, 50_day_moving_average, percent_change_from_50_day_moving_average, 200_day_moving_average, percent_change_from_200_day_moving_average, company_name, last_trade_date, last_trade_time) "
+                       "(symbol, change_in_percent, last_trade, 52_week_low, 52_week_high, 50_day_moving_average, percent_change_from_50_day_moving_average, 200_day_moving_average, percent_change_from_200_day_moving_average, volume, average_daily_volume, company_name, last_trade_date, last_trade_time) "
                        "VALUES " + insertValues)
     
         print insertQuery
@@ -142,7 +195,7 @@ try:
     cursor.execute(oneyearpriceData)
      
     #insert data into crossover
-    crossoverData = "INSERT INTO crossover (symbol, crossover_status, 50_day_moving_average, 200_day_moving_average) SELECT symbol, IF(50_day_moving_average - 200_day_moving_average > 0, 'True', 'False') as crossover_status, 50_day_moving_average, 200_day_moving_average FROM stockquotes;"
+    crossoverData = "INSERT INTO crossover (symbol, crossover_status, change_in_percent, last_trade, 50_day_moving_average, 200_day_moving_average) SELECT symbol, IF(50_day_moving_average - 200_day_moving_average > 0, IF(last_trade - 50_day_moving_average > 0, IF(change_in_percent > 0, 'True', 'False' ), 'False'), 'False') as crossover_status, change_in_percent, last_trade, 50_day_moving_average, 200_day_moving_average FROM stockquotes;"
     cursor.execute(crossoverData)
 #     
 #     #insert data into history prices
